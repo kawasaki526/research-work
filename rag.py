@@ -7,7 +7,12 @@ import re
 
 import fitz  # PyMuPDF
 import chromadb
-from chromadb.utils import embedding_functions
+try:
+    from chromadb.utils import embedding_functions
+except ImportError:
+    from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction as _STEF
+    class embedding_functions:
+        SentenceTransformerEmbeddingFunction = _STEF
 from groq import Groq
 
 import config
