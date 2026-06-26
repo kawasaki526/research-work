@@ -207,7 +207,7 @@ else:
 
 # ================== 左カラム: タブ ==================
 with col_main:
-    tab_lib, tab_task, tab_memo, tab_material = st.tabs(["論文", "タスク", "メモ", "資料"])
+    tab_lib, tab_task, tab_memo, tab_material, tab_works = st.tabs(["論文", "タスク", "メモ", "資料", "製作物"])
 
     # ===== 論文 =====
     with tab_lib:
@@ -467,6 +467,59 @@ with col_main:
                         if os.path.exists(path):
                             os.remove(path)
                         db.delete_material(mat["id"])
+                        st.rerun()
+
+
+    # ===== 製作物 =====
+    with tab_works:
+        with st.expander("製作物を追加", expanded=False):
+            w_title = st.text_input("タイトル", key="w_title")
+            w_desc  = st.text_area("説明（任意）", key="w_desc", height=80)
+            wc1, wc2 = st.columns(2)
+            with wc1:
+                w_cat  = st.selectbox("カテゴリ", db.WORK_CATEGORIES, key="w_cat")
+            with wc2:
+                w_date = st.date_input("完成日（任意）", value=None, key="w_date")
+            w_url  = st.text_input("URL（任意）", key="w_url", placeholder="https://...")
+            if st.button("追加", type="primary", key="w_add"):
+                if not w_title.strip():
+                    st.error("タイトルを入力してください")
+                else:
+                    db.add_work(
+                        w_title.strip(), w_desc.strip(), w_cat,
+                        w_url.strip(), w_date.isoformat() if w_date else "",
+                    )
+                    st.rerun()
+
+        flt_w = st.selectbox("カテゴリで絞り込み", ["すべて"] + db.WORK_CATEGORIES, key="w_filter")
+        works = db.list_works(flt_w)
+        if not works:
+            st.info("製作物がありません。")
+
+        cat_colors = {
+            "論文": "#6366F1", "ソフトウェア": "#3B82F6", "デザイン": "#EC4899",
+            "レポート": "#F59E0B", "その他": "#94A3B8",
+        }
+        for w in works:
+            with st.container(border=True):
+                wh1, wh2 = st.columns([5, 1])
+                with wh1:
+                    c = cat_colors.get(w.get("category", ""), "#94A3B8")
+                    st.markdown(
+                        f"**{w['title']}** "
+                        f"<span style='background:{c};color:white;padding:2px 8px;"
+                        f"border-radius:4px;font-size:0.75em;'>{w.get('category','')}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    if w.get("date"):
+                        st.caption(f"完成日: {w['date']}")
+                    if w.get("description"):
+                        st.caption(w["description"])
+                    if w.get("url"):
+                        st.markdown(f"[リンクを開く]({w['url']})")
+                with wh2:
+                    if st.button("削除", key=f"wdel_{w['id']}"):
+                        db.delete_work(w["id"])
                         st.rerun()
 
 

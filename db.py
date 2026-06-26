@@ -94,6 +94,17 @@ def init_db():
             uploaded_at TEXT
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS works (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            category TEXT,
+            url TEXT,
+            date TEXT,
+            created_at TEXT
+        )
+    """)
     cur.execute("SELECT COUNT(*) AS c FROM profile")
     if cur.fetchone()["c"] == 0:
         cur.execute(
@@ -318,4 +329,51 @@ def delete_material(mid):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM materials WHERE id=%s", (mid,))
+    cur.close()
+
+
+# ---- 製作物 ----
+
+WORK_CATEGORIES = ["論文", "ソフトウェア", "デザイン", "レポート", "その他"]
+
+
+def add_work(title, description, category, url, date):
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO works (title, description, category, url, date, created_at) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
+        (title, description, category, url, date,
+         datetime.datetime.now().isoformat(timespec="seconds")),
+    )
+    wid = cur.fetchone()["id"]
+    cur.close()
+    return wid
+
+
+def list_works(category=None):
+    conn = _conn()
+    cur = conn.cursor()
+    if category and category != "すべて":
+        cur.execute("SELECT * FROM works WHERE category=%s ORDER BY date DESC, created_at DESC", (category,))
+    else:
+        cur.execute("SELECT * FROM works ORDER BY date DESC, created_at DESC")
+    rows = cur.fetchall()
+    cur.close()
+    return [dict(r) for r in rows]
+
+
+def update_work(wid, **fields):
+    if not fields:
+        return
+    cols = ", ".join(f"{k}=%s" for k in fields)
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute(f"UPDATE works SET {cols} WHERE id=%s", (*fields.values(), wid))
+    cur.close()
+
+
+def delete_work(wid):
+    conn = _conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM works WHERE id=%s", (wid,))
     cur.close()
