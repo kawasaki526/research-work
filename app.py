@@ -95,23 +95,34 @@ def chat_system_prompt():
 
 
 # ---------------- サイドバー ----------------
+if "prof_loaded" not in st.session_state:
+    _prof = db.get_profile()
+    st.session_state.prof_field    = _prof.get("field", "")
+    st.session_state.prof_sub      = _prof.get("subtopics", "")
+    st.session_state.prof_level    = _prof.get("level", "大学院生")
+    st.session_state.prof_focus    = _prof.get("focus", "")
+    st.session_state.prof_lang     = _prof.get("answer_lang", "日本語")
+    st.session_state.prof_style    = _prof.get("answer_style", "簡潔に、要点から先に")
+    st.session_state.prof_loaded   = True
+
 with st.sidebar:
     st.subheader("研究プロフィール")
 
-    prof = db.get_profile()
-    field = st.text_input("専門分野", prof.get("field", ""))
-    subtopics = st.text_input("サブトピック", prof.get("subtopics", ""))
-    cur_level = prof.get("level", "大学院生")
-    level = st.selectbox(
+    field        = st.text_input("専門分野", key="prof_field")
+    subtopics    = st.text_input("サブトピック", key="prof_sub")
+    level        = st.selectbox(
         "レベル", config.LEVELS,
-        index=config.LEVELS.index(cur_level) if cur_level in config.LEVELS else 1,
+        index=config.LEVELS.index(st.session_state.prof_level)
+              if st.session_state.prof_level in config.LEVELS else 1,
+        key="prof_level",
     )
-    focus = st.text_area("現在の関心 / 取り組み", prof.get("focus", ""), height=80)
-    answer_lang = st.selectbox(
+    focus        = st.text_area("現在の関心 / 取り組み", key="prof_focus", height=80)
+    answer_lang  = st.selectbox(
         "回答言語", ["日本語", "English"],
-        index=0 if prof.get("answer_lang", "日本語") == "日本語" else 1,
+        index=0 if st.session_state.prof_lang == "日本語" else 1,
+        key="prof_lang",
     )
-    answer_style = st.text_input("回答スタイル", prof.get("answer_style", "簡潔に、要点から先に"))
+    answer_style = st.text_input("回答スタイル", key="prof_style")
 
     if st.button("プロフィールを保存", use_container_width=True):
         db.save_profile(field, subtopics, level, focus, answer_lang, answer_style)
