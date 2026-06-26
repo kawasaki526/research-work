@@ -310,6 +310,12 @@ with col_main:
                         unsafe_allow_html=True,
                     )
                 with h3:
+                    st_color = {"未着手": "#94A3B8", "進行中": "#3B82F6", "完了": "#22C55E"}.get(t["status"], "#94A3B8")
+                    st.markdown(
+                        f"<span style='background:{st_color};color:white;padding:2px 8px;"
+                        f"border-radius:4px;font-size:0.75em;'>{t['status']}</span>",
+                        unsafe_allow_html=True,
+                    )
                     idx = db.TASK_STATUSES.index(t["status"]) if t["status"] in db.TASK_STATUSES else 0
                     new_st = st.selectbox(
                         "状態", db.TASK_STATUSES, index=idx,
