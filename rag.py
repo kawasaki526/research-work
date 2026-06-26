@@ -1,6 +1,6 @@
 """RAG レイヤー。
 PDF からテキストを取り出し、チャンク分割してベクトルDB(Chroma)に保存し、
-質問時に関連チャンクを検索して、研究プロフィールを反映した Claude の回答を返す。
+質問時に関連チャンクを検索して、研究プロフィールを反映した Gemini の回答を返す。
 """
 import os
 import re
@@ -8,7 +8,7 @@ import re
 import fitz  # PyMuPDF
 import chromadb
 from chromadb.utils import embedding_functions
-from anthropic import Anthropic
+import google.generativeai as genai
 
 import config
 
@@ -114,10 +114,6 @@ def _build_system_prompt(profile):
 - 利用者のレベルに合わせ、前提知識を省きすぎず、冗長にもしない。"""
 
 
-def _make_client(api_key=None):
-    return Anthropic(api_key=api_key) if api_key else Anthropic()
-
-
 def answer(question, profile, k=config.TOP_K, paper_ids=None, api_key=None):
     """ライブラリを検索し、プロフィールを反映した回答と参照論文を返す。"""
     chunks = retrieve(question, k=k, paper_ids=paper_ids)
@@ -130,14 +126,13 @@ def answer(question, profile, k=config.TOP_K, paper_ids=None, api_key=None):
     system = _build_system_prompt(profile)
     user_msg = f"# 質問\n{question}\n\n# 参考文献（あなたのライブラリから抽出）\n{context}"
 
-    client = _make_client(api_key)
-    resp = client.messages.create(
-        model=config.CLAUDE_MODEL,
-        max_tokens=1500,
-        system=system,
-        messages=[{"role": "user", "content": user_msg}],
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name=config.GEMINI_MODEL,
+        system_instruction=system,
     )
-    text = "".join(b.text for b in resp.content if b.type == "text")
+    resp = model.generate_content(user_msg)
+    text = resp.text
 
     sources = []
     for c in chunks:
@@ -167,11 +162,10 @@ def suggest_next(profile, papers, api_key=None):
 この中から、次に読むべき未読/読書中の論文を、関心との関連が高い順に最大3件挙げ、
 それぞれ1行で理由を添えてください。日本語で簡潔に。"""
 
-    client = _make_client(api_key)
-    resp = client.messages.create(
-        model=config.CLAUDE_MODEL,
-        max_tokens=600,
-        system=system,
-        messages=[{"role": "user", "content": user_msg}],
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name=config.GEMINI_MODEL,
+        system_instruction=system,
     )
-    return "".join(b.text for b in resp.content if b.type == "text")
+    resp = model.generate_content(user_msg)
+    return resp.text

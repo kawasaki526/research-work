@@ -1,5 +1,5 @@
 streamlit>=1.40
-anthropic>=0.40
+google-generativeai>=0.7
 pymupdf>=1.24
 chromadb>=0.5
 sentence-transformers>=3.0
