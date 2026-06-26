@@ -1,4 +1,6 @@
 import os
+import calendar as cal_module
+from datetime import date
 
 import streamlit as st
 from groq import Groq
@@ -57,6 +59,45 @@ def get_api_key():
     return key
 
 
+def mini_calendar_html(tasks):
+    today = date.today()
+    year, month = today.year, today.month
+    task_dates = {}
+    status_colors = {"未着手": "#94A3B8", "進行中": "#3B82F6", "完了": "#22C55E"}
+    for t in tasks:
+        if t.get("due_date"):
+            task_dates[t["due_date"][:10]] = status_colors.get(t["status"], "#94A3B8")
+    weeks = cal_module.monthcalendar(year, month)
+    day_names = ["月", "火", "水", "木", "金", "土", "日"]
+    html = f"""<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
+        padding:14px;font-family:sans-serif;">
+      <div style="text-align:center;font-weight:700;font-size:0.95em;margin-bottom:8px;
+        color:#1E293B;">{year}年{month}月</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.8em;"><tr>"""
+    for d in day_names:
+        html += f'<th style="text-align:center;padding:3px;color:#64748B;">{d}</th>'
+    html += "</tr>"
+    for week in weeks:
+        html += "<tr>"
+        for i, day in enumerate(week):
+            if day == 0:
+                html += '<td style="padding:3px;"></td>'
+            else:
+                ds = f"{year}-{month:02d}-{day:02d}"
+                is_today = (day == today.day)
+                dot = task_dates.get(ds)
+                bg = "#2563EB" if is_today else "transparent"
+                fg = "white" if is_today else ("#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B"))
+                dot_html = f'<div style="width:5px;height:5px;border-radius:50%;background:{dot};margin:1px auto 0;"></div>' if dot else '<div style="height:6px;"></div>'
+                html += f'''<td style="text-align:center;padding:2px;">
+                  <div style="background:{bg};color:{fg};border-radius:50%;width:24px;height:24px;
+                    display:flex;align-items:center;justify-content:center;margin:0 auto;
+                    font-weight:{"700" if is_today else "400"};">{day}</div>{dot_html}</td>'''
+        html += "</tr>"
+    html += "</table></div>"
+    return html
+
+
 def chat_system_prompt():
     prof = db.get_profile()
     field = prof.get("field") or "（未設定）"
@@ -105,10 +146,14 @@ with st.sidebar:
 
 
 # ---------------- メイン ----------------
-st.title("研究ワークスペース")
+if "chat_open" not in st.session_state:
+    st.session_state.chat_open = True
 
-with st.expander("このアプリの使い方", expanded=False):
-    st.markdown("""
+hd_left, hd_right = st.columns([3, 2])
+with hd_left:
+    st.title("研究ワークスペース")
+    with st.expander("このアプリの使い方", expanded=False):
+        st.markdown("""
 **研究ワークスペース**は、自分でアップロードした論文PDFだけを根拠にAIが答える、個人用の研究管理ツールです。
 
 #### 基本的な流れ
@@ -136,15 +181,14 @@ with st.expander("このアプリの使い方", expanded=False):
 - アップロードしたファイルとデータはサーバー上に保存されますが、再デプロイ時に消える場合があります。
 - 論文への質問はライブラリ内の文献のみを根拠とします。
 """)
-
-if "chat_open" not in st.session_state:
-    st.session_state.chat_open = True
-
-top1, top2 = st.columns([6, 1])
-with top2:
-    if st.button("チャット" if not st.session_state.chat_open else "閉じる", use_container_width=True):
+    st.write("")
+    if st.button("チャット" if not st.session_state.chat_open else "チャットを閉じる"):
         st.session_state.chat_open = not st.session_state.chat_open
         st.rerun()
+
+with hd_right:
+    all_tasks_cal = db.list_tasks()
+    st.markdown(mini_calendar_html(all_tasks_cal), unsafe_allow_html=True)
 
 if st.session_state.chat_open:
     col_main, col_chat = st.columns([3, 2])
