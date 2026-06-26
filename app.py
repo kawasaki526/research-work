@@ -6,7 +6,7 @@ import config
 import db
 import rag
 
-st.set_page_config(page_title="研究ワークスペース", page_icon="📚", layout="wide")
+st.set_page_config(page_title="研究ワークスペース", layout="wide")
 db.init_db()
 
 
@@ -22,9 +22,9 @@ def get_api_key():
 
 # ---------------- サイドバー: APIキー + 研究プロフィール ----------------
 with st.sidebar:
-    st.header("⚙️ 設定")
+    st.header("設定")
 
-    with st.expander("🔑 APIキー", expanded=not get_api_key()):
+    with st.expander("APIキー", expanded=not get_api_key()):
         entered = st.text_input("Groq API Key", type="password", value="")
         if entered:
             st.session_state["api_key"] = entered
@@ -32,7 +32,7 @@ with st.sidebar:
         st.caption("secrets.toml に書いておけば毎回入力不要です。")
 
     st.divider()
-    st.subheader("🧭 研究プロフィール")
+    st.subheader("研究プロフィール")
     st.caption("ここがNotionとの差別化。AIがあなた仕様で答えます。")
 
     prof = db.get_profile()
@@ -56,15 +56,15 @@ with st.sidebar:
 
 
 # ---------------- メイン ----------------
-st.title("📚 研究ワークスペース")
+st.title("研究ワークスペース")
 st.caption("自分専用のNotion風RAG。ライブラリの論文だけを根拠に、あなた仕様で答えます。")
 
-tab_lib, tab_chat, tab_progress = st.tabs(["📚 ライブラリ", "💬 質問", "🧭 進捗"])
+tab_lib, tab_chat, tab_progress = st.tabs(["ライブラリ", "質問", "進捗"])
 
 
 # ===== ライブラリ =====
 with tab_lib:
-    with st.expander("➕ 論文を追加 (PDF)", expanded=False):
+    with st.expander("論文を追加 (PDF)", expanded=False):
         up = st.file_uploader("PDFをアップロード", type=["pdf"])
         title_in = st.text_input("タイトル（空ならファイル名）", key="add_title")
         authors_in = st.text_input("著者", key="add_authors")
@@ -119,7 +119,7 @@ with tab_lib:
                     db.update_paper_fields(p["id"], notes=notes)
                     st.toast("保存しました")
             with cc2:
-                if st.button("🗑 削除", key=f"del_{p['id']}"):
+                if st.button("削除", key=f"del_{p['id']}"):
                     rag.remove_paper(p["id"])
                     db.delete_paper(p["id"])
                     st.rerun()
@@ -160,7 +160,7 @@ with tab_progress:
     m4.metric("読了", counts.get("読了", 0))
 
     st.divider()
-    st.subheader("🤖 次に読むべき論文")
+    st.subheader("次に読むべき論文")
     st.caption("プロフィールの関心とライブラリの状況から提案します。")
     if st.button("提案してもらう"):
         key = get_api_key()
