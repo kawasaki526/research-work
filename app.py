@@ -293,9 +293,8 @@ with col_main:
                     "center": "title",
                     "right": "dayGridMonth,timeGridWeek",
                 },
-                "locale": "ja",
-                "height": 450,
             },
+            key="task_calendar",
         )
 
         st.divider()
