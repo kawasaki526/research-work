@@ -8,7 +8,7 @@ import re
 import fitz  # PyMuPDF
 import chromadb
 from chromadb.utils import embedding_functions
-import google.generativeai as genai
+from google import genai
 
 import config
 
@@ -126,12 +126,12 @@ def answer(question, profile, k=config.TOP_K, paper_ids=None, api_key=None):
     system = _build_system_prompt(profile)
     user_msg = f"# 質問\n{question}\n\n# 参考文献（あなたのライブラリから抽出）\n{context}"
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=config.GEMINI_MODEL,
-        system_instruction=system,
+    client = genai.Client(api_key=api_key)
+    resp = client.models.generate_content(
+        model=config.GEMINI_MODEL,
+        contents=user_msg,
+        config=genai.types.GenerateContentConfig(system_instruction=system),
     )
-    resp = model.generate_content(user_msg)
     text = resp.text
 
     sources = []
@@ -162,10 +162,10 @@ def suggest_next(profile, papers, api_key=None):
 この中から、次に読むべき未読/読書中の論文を、関心との関連が高い順に最大3件挙げ、
 それぞれ1行で理由を添えてください。日本語で簡潔に。"""
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name=config.GEMINI_MODEL,
-        system_instruction=system,
+    client = genai.Client(api_key=api_key)
+    resp = client.models.generate_content(
+        model=config.GEMINI_MODEL,
+        contents=user_msg,
+        config=genai.types.GenerateContentConfig(system_instruction=system),
     )
-    resp = model.generate_content(user_msg)
     return resp.text
