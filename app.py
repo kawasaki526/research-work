@@ -46,16 +46,6 @@ def chat_system_prompt():
 
 # ---------------- サイドバー ----------------
 with st.sidebar:
-    st.header("設定")
-
-    with st.expander("APIキー", expanded=not get_api_key()):
-        entered = st.text_input("Groq API Key", type="password", value="")
-        if entered:
-            st.session_state["api_key"] = entered
-            st.success("キーを設定しました")
-        st.caption("secrets.toml に書いておけば毎回入力不要です。")
-
-    st.divider()
     st.subheader("研究プロフィール")
 
     prof = db.get_profile()
