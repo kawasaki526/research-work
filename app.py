@@ -192,55 +192,49 @@ with hd_right:
     for t in all_tasks_cal:
         if t.get("due_date"):
             d = t["due_date"][:10]
-            if d not in task_date_map:
-                task_date_map[d] = []
-            task_date_map[d].append(t)
+            task_date_map.setdefault(d, []).append(t)
 
+    # 曜日ヘッダー
     day_names = ["月", "火", "水", "木", "金", "土", "日"]
-    rows_html = ""
+    hcols = st.columns(7)
+    for col, name in zip(hcols, day_names):
+        col.markdown(
+            f"<div style='text-align:center;font-size:0.75em;color:#64748B;padding:2px;'>{name}</div>",
+            unsafe_allow_html=True,
+        )
+
+    # 日付グリッド（全日ボタン＋ドット行で高さ統一）
     for week in weeks:
-        rows_html += "<tr>"
-        for i, day in enumerate(week):
+        wcols = st.columns(7)
+        for i, (col, day) in enumerate(zip(wcols, week)):
             if day == 0:
-                rows_html += "<td></td>"
-            else:
-                ds = f"{cal_year}-{cal_month:02d}-{day:02d}"
-                is_today = (day == today.day and cal_year == today.year and cal_month == today.month)
-                fg = "white" if is_today else ("#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B"))
-                bg = "#2563EB" if is_today else "transparent"
-                fw = "700" if is_today else "400"
-                dots = ""
-                for t in task_date_map.get(ds, []):
-                    c = STATUS_COLORS.get(t["status"], "#94A3B8")
-                    dots += f"<span style='display:inline-block;width:7px;height:7px;border-radius:50%;background:{c};margin:0 1px;'></span>"
-                rows_html += (
-                    f"<td style='text-align:center;padding:2px;'>"
-                    f"<div style='background:{bg};color:{fg};border-radius:50%;width:28px;height:28px;"
-                    f"display:flex;align-items:center;justify-content:center;margin:0 auto;"
-                    f"font-size:0.85em;font-weight:{fw};'>{day}</div>"
-                    f"<div style='min-height:9px;text-align:center;'>{dots}</div></td>"
+                col.markdown("<div style='height:36px;'></div>", unsafe_allow_html=True)
+                col.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+                continue
+            ds = f"{cal_year}-{cal_month:02d}-{day:02d}"
+            tasks_on_day = task_date_map.get(ds, [])
+            is_today = (day == today.day and cal_year == today.year and cal_month == today.month)
+            label = f"**{day}**" if is_today else str(day)
+            if col.button(label, key=f"cal_{ds}", use_container_width=True):
+                st.session_state.cal_selected_date = ds
+                st.rerun()
+            if tasks_on_day:
+                dots = "".join(
+                    f"<span style='display:inline-block;width:7px;height:7px;border-radius:50%;"
+                    f"background:{STATUS_COLORS.get(t['status'], '#94A3B8')};margin:0 1px;'></span>"
+                    for t in tasks_on_day
                 )
-        rows_html += "</tr>"
+                col.markdown(f"<div style='text-align:center;'>{dots}</div>", unsafe_allow_html=True)
+            else:
+                col.markdown("<div style='height:9px;'></div>", unsafe_allow_html=True)
 
-    header_html = "".join(
-        f"<th style='text-align:center;padding:4px;color:#64748B;font-size:0.75em;font-weight:500;'>{d}</th>"
-        for d in day_names
-    )
-    st.markdown(
-        f"<div style='background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:12px;'>"
-        f"<table style='width:100%;border-collapse:collapse;'>"
-        f"<tr>{header_html}</tr>{rows_html}"
-        f"</table></div>",
-        unsafe_allow_html=True,
-    )
-
-    # 日付選択でタスク表示
-    st.write("")
-    sel_date = st.date_input("日付を選択してタスクを確認", value=None, key="cal_date_pick", label_visibility="collapsed")
-    if sel_date:
-        sel_str = sel_date.isoformat()
-        sel_tasks = task_date_map.get(sel_str, [])
+    # 選択日のタスク表示
+    if st.session_state.get("cal_selected_date"):
+        sel = st.session_state.cal_selected_date
+        sel_tasks = task_date_map.get(sel, [])
         if sel_tasks:
+            st.divider()
+            st.caption(f"{sel} のタスク")
             for t in sel_tasks:
                 c = STATUS_COLORS.get(t["status"], "#94A3B8")
                 st.markdown(
@@ -251,8 +245,6 @@ with hd_right:
                     f"border-radius:3px;font-size:0.75em;'>{t['status']}</span></div>",
                     unsafe_allow_html=True,
                 )
-        else:
-            st.caption("この日のタスクはありません")
 
 if st.session_state.chat_open:
     col_main, col_chat = st.columns([3, 2])
