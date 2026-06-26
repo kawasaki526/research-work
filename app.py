@@ -1,5 +1,4 @@
 import os
-import calendar as cal_module
 from datetime import date
 
 import streamlit as st
@@ -161,109 +160,30 @@ with hd_left:
 
 with hd_right:
     today = date.today()
-    if "cal_year" not in st.session_state:
-        st.session_state.cal_year = today.year
-    if "cal_month" not in st.session_state:
-        st.session_state.cal_month = today.month
-
-    nav1, nav2, nav3 = st.columns([1, 3, 1])
-    with nav1:
-        if st.button("＜", key="cal_prev"):
-            m = st.session_state.cal_month - 1
-            if m < 1:
-                m = 12
-                st.session_state.cal_year -= 1
-            st.session_state.cal_month = m
-            st.rerun()
-    with nav2:
+    st.markdown("<div style='font-weight:700;font-size:0.95em;margin-bottom:6px;'>直近のタスク</div>", unsafe_allow_html=True)
+    upcoming = sorted(
+        [t for t in db.list_tasks() if t.get("due_date") and t["status"] != "完了"],
+        key=lambda t: t["due_date"],
+    )
+    no_due = [t for t in db.list_tasks() if not t.get("due_date") and t["status"] != "完了"]
+    display_tasks = upcoming + no_due
+    if not display_tasks:
+        st.caption("タスクがありません")
+    for t in display_tasks:
+        sc = STATUS_COLORS.get(t["status"], "#94A3B8")
+        pc = {"高": "#EF4444", "中": "#F59E0B", "低": "#94A3B8"}.get(t["priority"], "#94A3B8")
+        due = t.get("due_date", "")
+        overdue = due and due < today.isoformat() and t["status"] != "完了"
+        due_label = f"<span style='color:{'#EF4444' if overdue else '#64748B'};font-size:0.75em;'>{due}</span>" if due else ""
         st.markdown(
-            f"<div style='text-align:center;font-weight:700;padding-top:6px;'>"
-            f"{st.session_state.cal_year}年{st.session_state.cal_month}月</div>",
+            f"<div style='padding:5px 8px;border-left:3px solid {sc};margin:3px 0;"
+            f"background:#F8FAFC;border-radius:0 6px 6px 0;font-size:0.82em;'>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+            f"<span style='font-weight:600;'>{t['title']}</span>"
+            f"<span style='background:{pc};color:white;padding:1px 5px;border-radius:3px;font-size:0.72em;'>{t['priority']}</span>"
+            f"</div>{due_label}</div>",
             unsafe_allow_html=True,
         )
-    with nav3:
-        if st.button("＞", key="cal_next"):
-            m = st.session_state.cal_month + 1
-            if m > 12:
-                m = 1
-                st.session_state.cal_year += 1
-            st.session_state.cal_month = m
-            st.rerun()
-
-    all_tasks_cal = db.list_tasks()
-    cal_year = st.session_state.cal_year
-    cal_month = st.session_state.cal_month
-    weeks = cal_module.monthcalendar(cal_year, cal_month)
-
-    # タスクの締切日マップ
-    task_date_map = {}
-    for t in all_tasks_cal:
-        if t.get("due_date"):
-            d = t["due_date"][:10]
-            task_date_map.setdefault(d, []).append(t)
-
-    # 曜日ヘッダー
-    day_names = ["月", "火", "水", "木", "金", "土", "日"]
-    hcols = st.columns(7)
-    for col, name in zip(hcols, day_names):
-        col.markdown(
-            f"<div style='text-align:center;font-size:0.75em;color:#64748B;padding:2px;'>{name}</div>",
-            unsafe_allow_html=True,
-        )
-
-    # 日付グリッド
-    for week in weeks:
-        wcols = st.columns(7)
-        for i, (col, day) in enumerate(zip(wcols, week)):
-            if day == 0:
-                col.markdown("<div style='height:34px;'></div>", unsafe_allow_html=True)
-                continue
-            ds = f"{cal_year}-{cal_month:02d}-{day:02d}"
-            tasks_on_day = task_date_map.get(ds, [])
-            is_today = (day == today.day and cal_year == today.year and cal_month == today.month)
-            fg = "#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B")
-            bg = "#2563EB" if is_today else "transparent"
-            cfg = "white" if is_today else fg
-            fw = "700" if is_today else "400"
-            dots = "".join(
-                f"<span style='display:inline-block;width:6px;height:6px;border-radius:50%;"
-                f"background:{STATUS_COLORS.get(t['status'], '#94A3B8')};margin:0 1px;'></span>"
-                for t in tasks_on_day
-            ) if tasks_on_day else ""
-            if tasks_on_day:
-                if col.button(str(day), key=f"cal_{ds}", use_container_width=True):
-                    st.session_state.cal_selected_date = ds
-                    st.rerun()
-            else:
-                col.markdown(
-                    f"<div style='height:26px;display:flex;align-items:center;justify-content:center;'>"
-                    f"<div style='background:{bg};color:{cfg};border-radius:50%;width:22px;height:22px;"
-                    f"display:flex;align-items:center;justify-content:center;"
-                    f"font-size:0.78em;font-weight:{fw};'>{day}</div></div>",
-                    unsafe_allow_html=True,
-                )
-            col.markdown(
-                f"<div style='text-align:center;height:8px;'>{dots}</div>",
-                unsafe_allow_html=True,
-            )
-
-    # 選択日のタスク表示
-    if st.session_state.get("cal_selected_date"):
-        sel = st.session_state.cal_selected_date
-        sel_tasks = task_date_map.get(sel, [])
-        if sel_tasks:
-            st.divider()
-            st.caption(f"{sel} のタスク")
-            for t in sel_tasks:
-                c = STATUS_COLORS.get(t["status"], "#94A3B8")
-                st.markdown(
-                    f"<div style='padding:6px 10px;border-left:3px solid {c};margin:4px 0;"
-                    f"background:#F8FAFC;border-radius:0 6px 6px 0;font-size:0.85em;'>"
-                    f"<b>{t['title']}</b>&nbsp;"
-                    f"<span style='background:{c};color:white;padding:1px 6px;"
-                    f"border-radius:3px;font-size:0.75em;'>{t['status']}</span></div>",
-                    unsafe_allow_html=True,
-                )
 
 if st.session_state.chat_open:
     col_main, col_chat = st.columns([3, 2])
