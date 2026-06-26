@@ -13,6 +13,7 @@ DATA_DIR = os.environ.get("RAG_DATA_DIR", "data")
 CHROMA_DIR = os.path.join(DATA_DIR, "chroma")
 DB_PATH = os.path.join(DATA_DIR, "research.db")
 PDF_DIR = os.path.join(DATA_DIR, "pdfs")
+MATERIALS_DIR = os.path.join(DATA_DIR, "materials")
 
 # チャンク分割
 CHUNK_SIZE = 1000

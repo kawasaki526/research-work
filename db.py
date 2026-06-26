@@ -1,6 +1,5 @@
 """進捗管理レイヤー（SQLite）。
-論文の一覧・ステータス・メモ・要約と、AIをあなた仕様にする研究プロフィールを保持する。
-ベクトルDB（rag.py）とは別のレイヤー。
+論文・タスク・メモ・資料と研究プロフィールを保持する。
 """
 import os
 import sqlite3
@@ -41,6 +40,30 @@ def init_db():
             answer_lang TEXT,
             answer_style TEXT
         );
+        CREATE TABLE IF NOT EXISTS tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            detail TEXT,
+            due_date TEXT,
+            status TEXT DEFAULT '未着手',
+            priority TEXT DEFAULT '中',
+            created_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS memos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            content TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        );
+        CREATE TABLE IF NOT EXISTS materials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            filename TEXT,
+            category TEXT,
+            note TEXT,
+            uploaded_at TEXT
+        );
         """
     )
     cur = conn.execute("SELECT COUNT(*) AS c FROM profile")
@@ -54,7 +77,7 @@ def init_db():
     conn.close()
 
 
-# ---- 研究プロフィール（Notionとの差別化の中核） ----
+# ---- 研究プロフィール ----
 
 def get_profile():
     conn = _conn()
@@ -132,3 +155,134 @@ def counts_by_status():
     ).fetchall()
     conn.close()
     return {r["status"]: r["c"] for r in rows}
+
+
+# ---- タスク管理 ----
+
+TASK_STATUSES = ["未着手", "進行中", "完了"]
+TASK_PRIORITIES = ["高", "中", "低"]
+
+
+def add_task(title, detail, due_date, priority):
+    conn = _conn()
+    cur = conn.execute(
+        "INSERT INTO tasks (title, detail, due_date, priority, created_at) VALUES (?, ?, ?, ?, ?)",
+        (title, detail, due_date, priority,
+         datetime.datetime.now().isoformat(timespec="seconds")),
+    )
+    tid = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return tid
+
+
+def list_tasks(status=None):
+    conn = _conn()
+    order = "CASE priority WHEN '高' THEN 0 WHEN '中' THEN 1 ELSE 2 END, due_date ASC"
+    if status and status != "すべて":
+        rows = conn.execute(
+            f"SELECT * FROM tasks WHERE status=? ORDER BY {order}", (status,)
+        ).fetchall()
+    else:
+        rows = conn.execute(f"SELECT * FROM tasks ORDER BY {order}").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def update_task(tid, **fields):
+    if not fields:
+        return
+    cols = ", ".join(f"{k}=?" for k in fields)
+    conn = _conn()
+    conn.execute(f"UPDATE tasks SET {cols} WHERE id=?", (*fields.values(), tid))
+    conn.commit()
+    conn.close()
+
+
+def delete_task(tid):
+    conn = _conn()
+    conn.execute("DELETE FROM tasks WHERE id=?", (tid,))
+    conn.commit()
+    conn.close()
+
+
+# ---- メモ ----
+
+def add_memo(title, content):
+    now = datetime.datetime.now().isoformat(timespec="seconds")
+    conn = _conn()
+    cur = conn.execute(
+        "INSERT INTO memos (title, content, created_at, updated_at) VALUES (?, ?, ?, ?)",
+        (title, content, now, now),
+    )
+    mid = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return mid
+
+
+def list_memos():
+    conn = _conn()
+    rows = conn.execute("SELECT * FROM memos ORDER BY updated_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def update_memo(mid, title, content):
+    conn = _conn()
+    conn.execute(
+        "UPDATE memos SET title=?, content=?, updated_at=? WHERE id=?",
+        (title, content, datetime.datetime.now().isoformat(timespec="seconds"), mid),
+    )
+    conn.commit()
+    conn.close()
+
+
+def delete_memo(mid):
+    conn = _conn()
+    conn.execute("DELETE FROM memos WHERE id=?", (mid,))
+    conn.commit()
+    conn.close()
+
+
+# ---- 資料 ----
+
+def add_material(title, filename, category, note):
+    conn = _conn()
+    cur = conn.execute(
+        "INSERT INTO materials (title, filename, category, note, uploaded_at) VALUES (?, ?, ?, ?, ?)",
+        (title, filename, category, note,
+         datetime.datetime.now().isoformat(timespec="seconds")),
+    )
+    mid = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return mid
+
+
+def list_materials(category=None):
+    conn = _conn()
+    if category and category != "すべて":
+        rows = conn.execute(
+            "SELECT * FROM materials WHERE category=? ORDER BY uploaded_at DESC", (category,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM materials ORDER BY uploaded_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def list_material_categories():
+    conn = _conn()
+    rows = conn.execute(
+        "SELECT DISTINCT category FROM materials WHERE category IS NOT NULL AND category != ''"
+    ).fetchall()
+    conn.close()
+    return [r["category"] for r in rows]
+
+
+def delete_material(mid):
+    conn = _conn()
+    conn.execute("DELETE FROM materials WHERE id=?", (mid,))
+    conn.commit()
+    conn.close()
