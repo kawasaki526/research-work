@@ -2,7 +2,7 @@ import os
 
 # 回答生成に使う Claude モデル（コスパ重視で Sonnet）
 # より高品質にしたいときは "claude-opus-4-8" に変更
-GEMINI_MODEL = "gemini-1.5-flash"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 # 埋め込みモデル（多言語=日本語論文+英語論文の両方に対応）
 # 初回実行時に自動ダウンロードされます（約400MB）
