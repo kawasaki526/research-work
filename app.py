@@ -90,8 +90,8 @@ with st.expander("このアプリの使い方"):
 - 回答はライブラリ内の文献のみを根拠とします。それ以外の知識は使いません。
 """)
 
-tab_lib, tab_task, tab_memo, tab_material = st.tabs(
-    ["論文", "タスク", "メモ", "資料"]
+tab_lib, tab_chat, tab_task, tab_memo, tab_material = st.tabs(
+    ["論文", "チャット", "タスク", "メモ", "資料"]
 )
 
 
@@ -206,6 +206,68 @@ with tab_lib:
                     rag.remove_paper(p["id"])
                     db.delete_paper(p["id"])
                     st.rerun()
+
+
+# ===== チャット =====
+with tab_chat:
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("研究について何でも聞いてください")
+    if user_input:
+        key = get_api_key()
+        if not key:
+            st.error("APIキーを設定してください（サイドバー）")
+        else:
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            with st.chat_message("user"):
+                st.markdown(user_input)
+
+            prof = db.get_profile()
+            field = prof.get("field") or "（未設定）"
+            subtopics = prof.get("subtopics") or "（未設定）"
+            level = prof.get("level") or "大学院生"
+            focus = prof.get("focus") or "（未設定）"
+            lang = prof.get("answer_lang") or "日本語"
+            style = prof.get("answer_style") or "簡潔に"
+            system = f"""あなたは利用者専用の研究アシスタントです。利用者の研究プロフィールをもとに、研究全般について助言・議論・質問への回答を行います。
+
+# 利用者プロフィール
+- 専門分野: {field}
+- サブトピック: {subtopics}
+- レベル: {level}
+- 現在の関心: {focus}
+
+# 回答ルール
+- 回答は必ず {lang} で行う。
+- スタイル: {style}
+- 利用者のレベルに合わせた説明をする。
+- 論文ライブラリへのアクセスはないため、一般的な知識をもとに答える。"""
+
+            messages = [{"role": "system", "content": system}] + st.session_state.chat_history
+
+            from groq import Groq
+            client = Groq(api_key=key)
+            with st.chat_message("assistant"):
+                with st.spinner("考え中..."):
+                    resp = client.chat.completions.create(
+                        model=config.GROQ_MODEL,
+                        messages=messages,
+                        max_tokens=1500,
+                    )
+                    answer = resp.choices[0].message.content
+                st.markdown(answer)
+
+            st.session_state.chat_history.append({"role": "assistant", "content": answer})
+
+    if st.session_state.chat_history:
+        if st.button("会話をリセット", key="chat_reset"):
+            st.session_state.chat_history = []
+            st.rerun()
 
 
 # ===== タスク =====
