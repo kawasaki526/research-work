@@ -99,6 +99,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             title TEXT NOT NULL,
             description TEXT,
+            content TEXT,
             category TEXT,
             url TEXT,
             date TEXT,
@@ -337,12 +338,12 @@ def delete_material(mid):
 WORK_CATEGORIES = ["論文", "ソフトウェア", "デザイン", "レポート", "その他"]
 
 
-def add_work(title, description, category, url, date):
+def add_work(title, description, content, category, url, date):
     conn = _conn()
     cur = conn.cursor()
     cur.execute(
-        "INSERT INTO works (title, description, category, url, date, created_at) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-        (title, description, category, url, date,
+        "INSERT INTO works (title, description, content, category, url, date, created_at) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (title, description, content, category, url, date,
          datetime.datetime.now().isoformat(timespec="seconds")),
     )
     wid = cur.fetchone()["id"]

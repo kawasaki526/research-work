@@ -474,19 +474,21 @@ with col_main:
     with tab_works:
         with st.expander("製作物を追加", expanded=False):
             w_title = st.text_input("タイトル", key="w_title")
-            w_desc  = st.text_area("説明（任意）", key="w_desc", height=80)
+            w_desc  = st.text_input("一言説明（任意）", key="w_desc")
             wc1, wc2 = st.columns(2)
             with wc1:
                 w_cat  = st.selectbox("カテゴリ", db.WORK_CATEGORIES, key="w_cat")
             with wc2:
                 w_date = st.date_input("完成日（任意）", value=None, key="w_date")
-            w_url  = st.text_input("URL（任意）", key="w_url", placeholder="https://...")
+            w_url     = st.text_input("URL（任意）", key="w_url", placeholder="https://...")
+            w_content = st.text_area("詳細（Markdown対応）", key="w_content", height=200,
+                                     placeholder="## 概要\n\n詳細をMarkdownで記述できます...")
             if st.button("追加", type="primary", key="w_add"):
                 if not w_title.strip():
                     st.error("タイトルを入力してください")
                 else:
                     db.add_work(
-                        w_title.strip(), w_desc.strip(), w_cat,
+                        w_title.strip(), w_desc.strip(), w_content.strip(), w_cat,
                         w_url.strip(), w_date.isoformat() if w_date else "",
                     )
                     st.rerun()
@@ -502,9 +504,9 @@ with col_main:
         }
         for w in works:
             with st.container(border=True):
-                wh1, wh2 = st.columns([5, 1])
+                wh1, wh2, wh3 = st.columns([4, 1, 1])
+                c = cat_colors.get(w.get("category", ""), "#94A3B8")
                 with wh1:
-                    c = cat_colors.get(w.get("category", ""), "#94A3B8")
                     st.markdown(
                         f"**{w['title']}** "
                         f"<span style='background:{c};color:white;padding:2px 8px;"
@@ -518,9 +520,31 @@ with col_main:
                     if w.get("url"):
                         st.markdown(f"[リンクを開く]({w['url']})")
                 with wh2:
+                    edit_key = f"w_edit_{w['id']}"
+                    if st.button("編集", key=f"wedit_{w['id']}"):
+                        st.session_state[edit_key] = not st.session_state.get(edit_key, False)
+                        st.rerun()
+                with wh3:
                     if st.button("削除", key=f"wdel_{w['id']}"):
                         db.delete_work(w["id"])
                         st.rerun()
+
+                if st.session_state.get(f"w_edit_{w['id']}"):
+                    # 編集モード
+                    new_content = st.text_area(
+                        "Markdown編集", w.get("content") or "",
+                        key=f"wcontent_{w['id']}", height=300,
+                    )
+                    new_desc = st.text_input("一言説明", w.get("description") or "", key=f"wdesc_{w['id']}")
+                    new_url  = st.text_input("URL", w.get("url") or "", key=f"wurl_{w['id']}")
+                    if st.button("保存", key=f"wsave_{w['id']}"):
+                        db.update_work(w["id"], content=new_content, description=new_desc, url=new_url)
+                        st.session_state[f"w_edit_{w['id']}"] = False
+                        st.rerun()
+                elif w.get("content"):
+                    # プレビューモード
+                    st.divider()
+                    st.markdown(w["content"])
 
 
 # ================== 右カラム: チャット ==================
