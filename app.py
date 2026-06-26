@@ -12,7 +12,9 @@ db.init_db()
 
 st.markdown("""
 <style>
+#MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
+header {visibility: hidden;}
 
 h1 { font-weight: 700; letter-spacing: -0.5px; }
 
