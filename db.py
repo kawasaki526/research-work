@@ -5,8 +5,10 @@ import os
 import psycopg2
 import psycopg2.extras
 
+_cached_conn = None
 
-def _conn():
+
+def _get_url():
     url = os.environ.get("DATABASE_URL", "")
     if not url:
         try:
@@ -14,8 +16,22 @@ def _conn():
             url = st.secrets.get("DATABASE_URL", "")
         except Exception:
             pass
-    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
-    return conn
+    return url
+
+
+def _conn():
+    global _cached_conn
+    try:
+        if _cached_conn is not None and _cached_conn.closed == 0:
+            _cached_conn.cursor().execute("SELECT 1")
+            return _cached_conn
+    except Exception:
+        pass
+    _cached_conn = psycopg2.connect(
+        _get_url(), cursor_factory=psycopg2.extras.RealDictCursor
+    )
+    _cached_conn.autocommit = True
+    return _cached_conn
 
 
 def init_db():
@@ -85,9 +101,7 @@ def init_db():
             "VALUES (1, %s, %s, %s, %s, %s, %s)",
             ("", "", "大学院生", "", "日本語", "簡潔に、要点から先に"),
         )
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 # ---- 研究プロフィール ----
@@ -98,7 +112,6 @@ def get_profile():
     cur.execute("SELECT * FROM profile WHERE id = 1")
     row = cur.fetchone()
     cur.close()
-    conn.close()
     return dict(row) if row else {}
 
 
@@ -109,9 +122,7 @@ def save_profile(field, subtopics, level, focus, answer_lang, answer_style):
         "UPDATE profile SET field=%s, subtopics=%s, level=%s, focus=%s, answer_lang=%s, answer_style=%s WHERE id=1",
         (field, subtopics, level, focus, answer_lang, answer_style),
     )
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 # ---- 論文ライブラリ ----
@@ -126,9 +137,7 @@ def add_paper(title, authors, year, summary, filename, n_chunks):
          datetime.datetime.now().isoformat(timespec="seconds")),
     )
     pid = cur.fetchone()["id"]
-    conn.commit()
     cur.close()
-    conn.close()
     return pid
 
 
@@ -141,7 +150,6 @@ def list_papers(status=None):
         cur.execute("SELECT * FROM papers ORDER BY added_at DESC")
     rows = cur.fetchall()
     cur.close()
-    conn.close()
     return [dict(r) for r in rows]
 
 
@@ -151,7 +159,6 @@ def get_paper(pid):
     cur.execute("SELECT * FROM papers WHERE id=%s", (pid,))
     row = cur.fetchone()
     cur.close()
-    conn.close()
     return dict(row) if row else None
 
 
@@ -162,18 +169,14 @@ def update_paper_fields(pid, **fields):
     conn = _conn()
     cur = conn.cursor()
     cur.execute(f"UPDATE papers SET {cols} WHERE id=%s", (*fields.values(), pid))
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 def delete_paper(pid):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM papers WHERE id=%s", (pid,))
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 def counts_by_status():
@@ -182,7 +185,6 @@ def counts_by_status():
     cur.execute("SELECT status, COUNT(*) AS c FROM papers GROUP BY status")
     rows = cur.fetchall()
     cur.close()
-    conn.close()
     return {r["status"]: r["c"] for r in rows}
 
 
@@ -201,9 +203,7 @@ def add_task(title, detail, due_date, priority):
          datetime.datetime.now().isoformat(timespec="seconds")),
     )
     tid = cur.fetchone()["id"]
-    conn.commit()
     cur.close()
-    conn.close()
     return tid
 
 
@@ -217,7 +217,6 @@ def list_tasks(status=None):
         cur.execute(f"SELECT * FROM tasks ORDER BY {order}")
     rows = cur.fetchall()
     cur.close()
-    conn.close()
     return [dict(r) for r in rows]
 
 
@@ -228,18 +227,14 @@ def update_task(tid, **fields):
     conn = _conn()
     cur = conn.cursor()
     cur.execute(f"UPDATE tasks SET {cols} WHERE id=%s", (*fields.values(), tid))
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 def delete_task(tid):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM tasks WHERE id=%s", (tid,))
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 # ---- メモ ----
@@ -253,9 +248,7 @@ def add_memo(title, content):
         (title, content, now, now),
     )
     mid = cur.fetchone()["id"]
-    conn.commit()
     cur.close()
-    conn.close()
     return mid
 
 
@@ -265,7 +258,6 @@ def list_memos():
     cur.execute("SELECT * FROM memos ORDER BY updated_at DESC")
     rows = cur.fetchall()
     cur.close()
-    conn.close()
     return [dict(r) for r in rows]
 
 
@@ -276,18 +268,14 @@ def update_memo(mid, title, content):
         "UPDATE memos SET title=%s, content=%s, updated_at=%s WHERE id=%s",
         (title, content, datetime.datetime.now().isoformat(timespec="seconds"), mid),
     )
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 def delete_memo(mid):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM memos WHERE id=%s", (mid,))
-    conn.commit()
     cur.close()
-    conn.close()
 
 
 # ---- 資料 ----
@@ -301,9 +289,7 @@ def add_material(title, filename, category, note):
          datetime.datetime.now().isoformat(timespec="seconds")),
     )
     mid = cur.fetchone()["id"]
-    conn.commit()
     cur.close()
-    conn.close()
     return mid
 
 
@@ -316,7 +302,6 @@ def list_materials(category=None):
         cur.execute("SELECT * FROM materials ORDER BY uploaded_at DESC")
     rows = cur.fetchall()
     cur.close()
-    conn.close()
     return [dict(r) for r in rows]
 
 
@@ -326,7 +311,6 @@ def list_material_categories():
     cur.execute("SELECT DISTINCT category FROM materials WHERE category IS NOT NULL AND category != ''")
     rows = cur.fetchall()
     cur.close()
-    conn.close()
     return [r["category"] for r in rows]
 
 
@@ -334,6 +318,4 @@ def delete_material(mid):
     conn = _conn()
     cur = conn.cursor()
     cur.execute("DELETE FROM materials WHERE id=%s", (mid,))
-    conn.commit()
     cur.close()
-    conn.close()
