@@ -59,9 +59,8 @@ def get_api_key():
     return key
 
 
-def mini_calendar_html(tasks):
+def mini_calendar_html(tasks, year, month):
     today = date.today()
-    year, month = today.year, today.month
     task_dates = {}
     status_colors = {"未着手": "#94A3B8", "進行中": "#3B82F6", "完了": "#22C55E"}
     for t in tasks:
@@ -71,8 +70,6 @@ def mini_calendar_html(tasks):
     day_names = ["月", "火", "水", "木", "金", "土", "日"]
     html = f"""<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
         padding:14px;font-family:sans-serif;">
-      <div style="text-align:center;font-weight:700;font-size:0.95em;margin-bottom:8px;
-        color:#1E293B;">{year}年{month}月</div>
       <table style="width:100%;border-collapse:collapse;font-size:0.8em;"><tr>"""
     for d in day_names:
         html += f'<th style="text-align:center;padding:3px;color:#64748B;">{d}</th>'
@@ -84,7 +81,7 @@ def mini_calendar_html(tasks):
                 html += '<td style="padding:3px;"></td>'
             else:
                 ds = f"{year}-{month:02d}-{day:02d}"
-                is_today = (day == today.day)
+                is_today = (day == today.day and year == today.year and month == today.month)
                 dot = task_dates.get(ds)
                 bg = "#2563EB" if is_today else "transparent"
                 fg = "white" if is_today else ("#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B"))
@@ -188,7 +185,40 @@ with hd_left:
             st.rerun()
 
 with hd_right:
-    st.markdown(mini_calendar_html(db.list_tasks()), unsafe_allow_html=True)
+    today = date.today()
+    if "cal_year" not in st.session_state:
+        st.session_state.cal_year = today.year
+    if "cal_month" not in st.session_state:
+        st.session_state.cal_month = today.month
+
+    nav1, nav2, nav3 = st.columns([1, 3, 1])
+    with nav1:
+        if st.button("＜", key="cal_prev"):
+            m = st.session_state.cal_month - 1
+            if m < 1:
+                m = 12
+                st.session_state.cal_year -= 1
+            st.session_state.cal_month = m
+            st.rerun()
+    with nav2:
+        st.markdown(
+            f"<div style='text-align:center;font-weight:700;padding-top:6px;'>"
+            f"{st.session_state.cal_year}年{st.session_state.cal_month}月</div>",
+            unsafe_allow_html=True,
+        )
+    with nav3:
+        if st.button("＞", key="cal_next"):
+            m = st.session_state.cal_month + 1
+            if m > 12:
+                m = 1
+                st.session_state.cal_year += 1
+            st.session_state.cal_month = m
+            st.rerun()
+
+    st.markdown(
+        mini_calendar_html(db.list_tasks(), st.session_state.cal_year, st.session_state.cal_month),
+        unsafe_allow_html=True,
+    )
 
 if st.session_state.chat_open:
     col_main, col_chat = st.columns([3, 2])
