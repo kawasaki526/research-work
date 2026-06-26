@@ -33,7 +33,6 @@ with st.sidebar:
 
     st.divider()
     st.subheader("研究プロフィール")
-    st.caption("ここがNotionとの差別化。AIがあなた仕様で答えます。")
 
     prof = db.get_profile()
     field = st.text_input("専門分野", prof.get("field", ""))
@@ -91,13 +90,63 @@ with st.expander("このアプリの使い方"):
 - 回答はライブラリ内の文献のみを根拠とします。それ以外の知識は使いません。
 """)
 
-tab_lib, tab_chat, tab_task, tab_memo, tab_material, tab_progress = st.tabs(
-    ["ライブラリ", "質問", "タスク", "メモ", "資料", "進捗"]
+tab_lib, tab_task, tab_memo, tab_material = st.tabs(
+    ["論文", "タスク", "メモ", "資料"]
 )
 
 
-# ===== ライブラリ =====
+# ===== 論文 =====
 with tab_lib:
+    # --- 進捗サマリー ---
+    counts = db.counts_by_status()
+    total = sum(counts.values())
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("合計", total)
+    m2.metric("未読", counts.get("未読", 0))
+    m3.metric("読書中", counts.get("読書中", 0))
+    m4.metric("読了", counts.get("読了", 0))
+
+    st.divider()
+
+    # --- 質問 ---
+    st.subheader("質問")
+    papers_all = db.list_papers()
+    if not papers_all:
+        st.info("先に論文を取り込んでください。")
+    else:
+        options = {p["title"]: p["id"] for p in papers_all}
+        scope = st.multiselect("対象論文を限定（空なら全体）", list(options.keys()))
+        q = st.text_input("質問", placeholder="例: この論文の提案手法の新規性は？")
+        if st.button("質問する", type="primary") and q:
+            key = get_api_key()
+            if not key:
+                st.error("APIキーを設定してください（サイドバー）")
+            else:
+                paper_ids = [options[s] for s in scope] if scope else None
+                with st.spinner("検索して回答を生成中..."):
+                    result = rag.answer(
+                        q, db.get_profile(), paper_ids=paper_ids, api_key=key
+                    )
+                st.markdown(result["text"])
+                if result["sources"]:
+                    st.caption("参照: " + " ・ ".join(result["sources"]))
+
+    st.divider()
+
+    # --- 次に読む論文の提案 ---
+    st.subheader("次に読むべき論文")
+    if st.button("提案してもらう"):
+        key = get_api_key()
+        if not key:
+            st.error("APIキーを設定してください")
+        else:
+            with st.spinner("提案を生成中..."):
+                st.markdown(rag.suggest_next(db.get_profile(), db.list_papers(), api_key=key))
+
+    st.divider()
+
+    # --- 論文ライブラリ ---
+    st.subheader("論文一覧")
     with st.expander("論文を追加 (PDF)", expanded=False):
         up = st.file_uploader("PDFをアップロード", type=["pdf"])
         title_in = st.text_input("タイトル（空ならファイル名）", key="add_title")
@@ -157,30 +206,6 @@ with tab_lib:
                     rag.remove_paper(p["id"])
                     db.delete_paper(p["id"])
                     st.rerun()
-
-
-# ===== 質問 =====
-with tab_chat:
-    papers = db.list_papers()
-    if not papers:
-        st.info("先にライブラリへ論文を取り込んでください。")
-    else:
-        options = {p["title"]: p["id"] for p in papers}
-        scope = st.multiselect("対象論文を限定（空ならライブラリ全体）", list(options.keys()))
-        q = st.text_input("質問", placeholder="例: この論文の提案手法の新規性は？")
-        if st.button("質問する", type="primary") and q:
-            key = get_api_key()
-            if not key:
-                st.error("APIキーを設定してください（サイドバー）")
-            else:
-                paper_ids = [options[s] for s in scope] if scope else None
-                with st.spinner("ライブラリを検索して回答を生成中..."):
-                    result = rag.answer(
-                        q, db.get_profile(), paper_ids=paper_ids, api_key=key
-                    )
-                st.markdown(result["text"])
-                if result["sources"]:
-                    st.caption("参照: " + " ・ ".join(result["sources"]))
 
 
 # ===== タスク =====
@@ -322,23 +347,3 @@ with tab_material:
                     st.rerun()
 
 
-# ===== 進捗 =====
-with tab_progress:
-    counts = db.counts_by_status()
-    total = sum(counts.values())
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("合計", total)
-    m2.metric("未読", counts.get("未読", 0))
-    m3.metric("読書中", counts.get("読書中", 0))
-    m4.metric("読了", counts.get("読了", 0))
-
-    st.divider()
-    st.subheader("次に読むべき論文")
-    st.caption("プロフィールの関心とライブラリの状況から提案します。")
-    if st.button("提案してもらう"):
-        key = get_api_key()
-        if not key:
-            st.error("APIキーを設定してください")
-        else:
-            with st.spinner("提案を生成中..."):
-                st.markdown(rag.suggest_next(db.get_profile(), db.list_papers(), api_key=key))
