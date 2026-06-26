@@ -57,7 +57,6 @@ with st.sidebar:
 
 # ---------------- メイン ----------------
 st.title("研究ワークスペース")
-st.caption("自分専用のNotion風RAG。ライブラリの論文だけを根拠に、あなた仕様で答えます。")
 
 with st.expander("このアプリの使い方"):
     st.markdown("""
