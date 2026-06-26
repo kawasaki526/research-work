@@ -176,7 +176,8 @@ with hd_right:
         pc = {"高": "#EF4444", "中": "#F59E0B", "低": "#94A3B8"}.get(t["priority"], "#94A3B8")
         due = t.get("due_date", "")
         overdue = due and due < today.isoformat() and t["status"] != "完了"
-        due_label = f"<span style='color:{'#EF4444' if overdue else '#64748B'};font-size:0.75em;'>{due}</span>" if due else ""
+        due_color = "#EF4444" if overdue else "#64748B"
+        due_label = f"<span style='color:{due_color};font-size:0.75em;'>{due}</span>" if due else ""
         st.markdown(
             f"<div style='padding:5px 8px;border-left:3px solid {sc};margin:3px 0;"
             f"background:#F8FAFC;border-radius:0 6px 6px 0;font-size:0.82em;'>"
