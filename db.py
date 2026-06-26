@@ -106,6 +106,7 @@ def init_db():
             created_at TEXT
         )
     """)
+    cur.execute("ALTER TABLE works ADD COLUMN IF NOT EXISTS content TEXT")
     cur.execute("SELECT COUNT(*) AS c FROM profile")
     if cur.fetchone()["c"] == 0:
         cur.execute(
