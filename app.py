@@ -10,6 +10,54 @@ import rag
 st.set_page_config(page_title="研究ワークスペース", page_icon=None, layout="wide")
 db.init_db()
 
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+
+/* タイトル */
+h1 { font-weight: 700; letter-spacing: -0.5px; }
+
+/* タブのスタイル */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    border-bottom: 2px solid #E2E8F0;
+}
+.stTabs [data-baseweb="tab"] {
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 6px 6px 0 0;
+}
+
+/* コンテナのボーダー */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+}
+
+/* ボタン */
+.stButton > button {
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* サイドバー */
+[data-testid="stSidebar"] {
+    background-color: #F8FAFC;
+    border-right: 1px solid #E2E8F0;
+}
+
+/* メトリクス */
+[data-testid="stMetric"] {
+    background-color: #F8FAFC;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid #E2E8F0;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 def get_api_key():
     try:
@@ -71,7 +119,7 @@ with st.sidebar:
 # ---------------- メイン ----------------
 st.title("研究ワークスペース")
 
-with st.expander("このアプリの使い方"):
+with st.expander("このアプリの使い方", expanded=False):
     st.markdown("""
 **研究ワークスペース**は、自分でアップロードした論文PDFだけを根拠にAIが答える、個人用の研究管理ツールです。
 
@@ -129,6 +177,9 @@ with col_main:
         m2.metric("未読", counts.get("未読", 0))
         m3.metric("読書中", counts.get("読書中", 0))
         m4.metric("読了", counts.get("読了", 0))
+        if total > 0:
+            done = counts.get("読了", 0)
+            st.progress(done / total, text=f"読了率 {done}/{total}")
 
         st.divider()
         st.subheader("質問")
@@ -197,7 +248,13 @@ with col_main:
             with st.container(border=True):
                 c1, c2 = st.columns([4, 1])
                 with c1:
-                    st.markdown(f"**{p['title']}**")
+                    badge_color = {"未読": "#94A3B8", "読書中": "#3B82F6", "読了": "#22C55E"}.get(p["status"], "#94A3B8")
+                    st.markdown(
+                        f"**{p['title']}** "
+                        f"<span style='background:{badge_color};color:white;padding:2px 8px;"
+                        f"border-radius:4px;font-size:0.75em;'>{p['status']}</span>",
+                        unsafe_allow_html=True,
+                    )
                     meta = " / ".join(x for x in [p.get("authors"), p.get("year")] if x)
                     if meta:
                         st.caption(meta)
@@ -258,8 +315,12 @@ with col_main:
                     if t.get("due_date"):
                         st.caption(f"締切: {t['due_date']}")
                 with h2:
-                    priority_badge = {"高": "高", "中": "中", "低": "低"}.get(t["priority"], t["priority"])
-                    st.caption(priority_badge)
+                    p_color = {"高": "#EF4444", "中": "#F59E0B", "低": "#6B7280"}.get(t["priority"], "#6B7280")
+                    st.markdown(
+                        f"<span style='background:{p_color};color:white;padding:2px 8px;"
+                        f"border-radius:4px;font-size:0.75em;'>{t['priority']}</span>",
+                        unsafe_allow_html=True,
+                    )
                 with h3:
                     idx = db.TASK_STATUSES.index(t["status"]) if t["status"] in db.TASK_STATUSES else 0
                     new_st = st.selectbox(
