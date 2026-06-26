@@ -101,7 +101,20 @@ with st.expander("このアプリの使い方"):
 - 論文への質問はライブラリ内の文献のみを根拠とします。
 """)
 
-col_main, col_chat = st.columns([3, 2])
+if "chat_open" not in st.session_state:
+    st.session_state.chat_open = True
+
+top1, top2 = st.columns([6, 1])
+with top2:
+    if st.button("チャット" if not st.session_state.chat_open else "閉じる", use_container_width=True):
+        st.session_state.chat_open = not st.session_state.chat_open
+        st.rerun()
+
+if st.session_state.chat_open:
+    col_main, col_chat = st.columns([3, 2])
+else:
+    col_main = st.container()
+    col_chat = None
 
 # ================== 左カラム: タブ ==================
 with col_main:
@@ -350,39 +363,40 @@ with col_main:
 
 
 # ================== 右カラム: チャット ==================
-with col_chat:
-    st.subheader("研究チャット")
+if col_chat is not None:
+    with col_chat:
+        st.subheader("チャット")
 
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-
-    chat_container = st.container(height=500)
-    with chat_container:
-        if not st.session_state.chat_history:
-            st.caption("研究について何でも聞いてください。")
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg["role"]):
-                st.markdown(msg["content"])
-
-    user_input = st.chat_input("メッセージを入力...")
-    if user_input:
-        key = get_api_key()
-        if not key:
-            st.error("APIキーを設定してください（サイドバー）")
-        else:
-            st.session_state.chat_history.append({"role": "user", "content": user_input})
-            messages = [{"role": "system", "content": chat_system_prompt()}] + st.session_state.chat_history
-            client = Groq(api_key=key)
-            resp = client.chat.completions.create(
-                model=config.GROQ_MODEL,
-                messages=messages,
-                max_tokens=1500,
-            )
-            answer = resp.choices[0].message.content
-            st.session_state.chat_history.append({"role": "assistant", "content": answer})
-            st.rerun()
-
-    if st.session_state.chat_history:
-        if st.button("会話をリセット", use_container_width=True):
+        if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
-            st.rerun()
+
+        chat_container = st.container(height=500)
+        with chat_container:
+            if not st.session_state.chat_history:
+                st.caption("研究について何でも聞いてください。")
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.markdown(msg["content"])
+
+        user_input = st.chat_input("メッセージを入力...")
+        if user_input:
+            key = get_api_key()
+            if not key:
+                st.error("APIキーを設定してください（サイドバー）")
+            else:
+                st.session_state.chat_history.append({"role": "user", "content": user_input})
+                messages = [{"role": "system", "content": chat_system_prompt()}] + st.session_state.chat_history
+                client = Groq(api_key=key)
+                resp = client.chat.completions.create(
+                    model=config.GROQ_MODEL,
+                    messages=messages,
+                    max_tokens=1500,
+                )
+                answer = resp.choices[0].message.content
+                st.session_state.chat_history.append({"role": "assistant", "content": answer})
+                st.rerun()
+
+        if st.session_state.chat_history:
+            if st.button("会話をリセット", use_container_width=True):
+                st.session_state.chat_history = []
+                st.rerun()
