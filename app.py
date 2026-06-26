@@ -203,30 +203,41 @@ with hd_right:
             unsafe_allow_html=True,
         )
 
-    # 日付グリッド（全日ボタン＋ドット行で高さ統一）
+    # 日付グリッド
     for week in weeks:
         wcols = st.columns(7)
         for i, (col, day) in enumerate(zip(wcols, week)):
             if day == 0:
-                col.markdown("<div style='height:36px;'></div>", unsafe_allow_html=True)
-                col.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
+                col.markdown("<div style='height:46px;'></div>", unsafe_allow_html=True)
                 continue
             ds = f"{cal_year}-{cal_month:02d}-{day:02d}"
             tasks_on_day = task_date_map.get(ds, [])
             is_today = (day == today.day and cal_year == today.year and cal_month == today.month)
-            label = f"**{day}**" if is_today else str(day)
-            if col.button(label, key=f"cal_{ds}", use_container_width=True):
-                st.session_state.cal_selected_date = ds
-                st.rerun()
+            fg = "#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B")
+            bg = "#2563EB" if is_today else "transparent"
+            cfg = "white" if is_today else fg
+            fw = "700" if is_today else "400"
+            dots = "".join(
+                f"<span style='display:inline-block;width:6px;height:6px;border-radius:50%;"
+                f"background:{STATUS_COLORS.get(t['status'], '#94A3B8')};margin:0 1px;'></span>"
+                for t in tasks_on_day
+            ) if tasks_on_day else ""
             if tasks_on_day:
-                dots = "".join(
-                    f"<span style='display:inline-block;width:7px;height:7px;border-radius:50%;"
-                    f"background:{STATUS_COLORS.get(t['status'], '#94A3B8')};margin:0 1px;'></span>"
-                    for t in tasks_on_day
-                )
-                col.markdown(f"<div style='text-align:center;'>{dots}</div>", unsafe_allow_html=True)
+                if col.button(str(day), key=f"cal_{ds}", use_container_width=True):
+                    st.session_state.cal_selected_date = ds
+                    st.rerun()
             else:
-                col.markdown("<div style='height:9px;'></div>", unsafe_allow_html=True)
+                col.markdown(
+                    f"<div style='height:38px;display:flex;align-items:center;justify-content:center;'>"
+                    f"<div style='background:{bg};color:{cfg};border-radius:50%;width:26px;height:26px;"
+                    f"display:flex;align-items:center;justify-content:center;"
+                    f"font-size:0.85em;font-weight:{fw};'>{day}</div></div>",
+                    unsafe_allow_html=True,
+                )
+            col.markdown(
+                f"<div style='text-align:center;height:8px;'>{dots}</div>",
+                unsafe_allow_html=True,
+            )
 
     # 選択日のタスク表示
     if st.session_state.get("cal_selected_date"):
