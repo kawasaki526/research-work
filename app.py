@@ -8,14 +8,16 @@ import config
 import db
 import rag
 
-st.set_page_config(page_title="研究ワークスペース", page_icon=None, layout="wide")
+st.set_page_config(page_title="研究ワークスペース", page_icon=None, layout="wide", initial_sidebar_state="expanded")
 db.init_db()
 
 st.markdown("""
 <style>
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
-header {visibility: hidden;}
+[data-testid="stHeader"] {visibility: hidden; height: 0; min-height: 0;}
+[data-testid="stSidebarCollapsedControl"] {visibility: visible !important; height: auto !important;}
+[data-testid="stSidebarNavToggleButton"] {visibility: visible !important;}
 
 h1 { font-weight: 700; letter-spacing: -0.5px; }
 
