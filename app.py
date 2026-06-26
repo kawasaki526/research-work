@@ -10,59 +10,37 @@ import rag
 st.set_page_config(page_title="研究ワークスペース", page_icon=None, layout="wide")
 db.init_db()
 
-_DEFAULT_COLOR = "#2563EB"
-_theme_color = db.get_profile().get("theme_color") or _DEFAULT_COLOR
-
-st.markdown(f"""
+st.markdown("""
 <style>
-#MainMenu {{visibility: hidden;}}
-footer {{visibility: hidden;}}
-header {{visibility: hidden;}}
+footer {visibility: hidden;}
 
-h1 {{ font-weight: 700; letter-spacing: -0.5px; }}
+h1 { font-weight: 700; letter-spacing: -0.5px; }
 
-.stTabs [data-baseweb="tab-list"] {{
+.stTabs [data-baseweb="tab-list"] {
     gap: 4px;
     border-bottom: 2px solid #E2E8F0;
-}}
-.stTabs [data-baseweb="tab"] {{
+}
+.stTabs [data-baseweb="tab"] {
     font-weight: 500;
     padding: 8px 20px;
     border-radius: 6px 6px 0 0;
-}}
+}
 
-[data-testid="stVerticalBlockBorderWrapper"] {{
+[data-testid="stVerticalBlockBorderWrapper"] {
     border-radius: 10px;
     border: 1px solid #E2E8F0;
-}}
+}
 
-.stButton > button {{
+.stButton > button {
     border-radius: 6px;
     font-weight: 500;
-}}
+}
 
-button[kind="primary"] {{
-    background-color: {_theme_color} !important;
-    border-color: {_theme_color} !important;
-}}
-
-[data-testid="stSidebar"] {{
-    background-color: #F8FAFC;
-    border-right: 1px solid #E2E8F0;
-}}
-
-[data-testid="stMetric"] {{
-    background-color: #F8FAFC;
+[data-testid="stMetric"] {
     border-radius: 10px;
     padding: 12px;
     border: 1px solid #E2E8F0;
-}}
-
-[data-testid="stProgress"] > div > div {{
-    background-color: {_theme_color} !important;
-}}
-
-a {{ color: {_theme_color} !important; }}
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,14 +97,9 @@ with st.sidebar:
     )
     answer_style = st.text_input("回答スタイル", prof.get("answer_style", "簡潔に、要点から先に"))
 
-    st.divider()
-    st.subheader("テーマカラー")
-    theme_color = st.color_picker("アクセントカラー", _theme_color)
-
     if st.button("プロフィールを保存", use_container_width=True):
-        db.save_profile(field, subtopics, level, focus, answer_lang, answer_style, theme_color)
+        db.save_profile(field, subtopics, level, focus, answer_lang, answer_style)
         st.success("保存しました")
-        st.rerun()
 
 
 # ---------------- メイン ----------------

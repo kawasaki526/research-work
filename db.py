@@ -87,16 +87,11 @@ def get_profile():
     return dict(row) if row else {}
 
 
-def save_profile(field, subtopics, level, focus, answer_lang, answer_style, theme_color=None):
+def save_profile(field, subtopics, level, focus, answer_lang, answer_style):
     conn = _conn()
-    try:
-        conn.execute("ALTER TABLE profile ADD COLUMN theme_color TEXT")
-        conn.commit()
-    except Exception:
-        pass
     conn.execute(
-        "UPDATE profile SET field=?, subtopics=?, level=?, focus=?, answer_lang=?, answer_style=?, theme_color=? WHERE id=1",
-        (field, subtopics, level, focus, answer_lang, answer_style, theme_color),
+        "UPDATE profile SET field=?, subtopics=?, level=?, focus=?, answer_lang=?, answer_style=? WHERE id=1",
+        (field, subtopics, level, focus, answer_lang, answer_style),
     )
     conn.commit()
     conn.close()
