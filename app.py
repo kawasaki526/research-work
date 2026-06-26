@@ -188,8 +188,7 @@ with hd_left:
             st.rerun()
 
 with hd_right:
-    all_tasks_cal = db.list_tasks()
-    st.markdown(mini_calendar_html(all_tasks_cal), unsafe_allow_html=True)
+    st.markdown(mini_calendar_html(db.list_tasks()), unsafe_allow_html=True)
 
 if st.session_state.chat_open:
     col_main, col_chat = st.columns([3, 2])
