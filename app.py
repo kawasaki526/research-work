@@ -2,6 +2,7 @@ import os
 
 import streamlit as st
 from groq import Groq
+from streamlit_calendar import calendar as st_calendar
 
 import config
 import db
@@ -272,6 +273,33 @@ with col_main:
 
     # ===== タスク =====
     with tab_task:
+        # --- カレンダー ---
+        all_tasks = db.list_tasks()
+        events = []
+        status_colors = {"未着手": "#94A3B8", "進行中": "#3B82F6", "完了": "#22C55E"}
+        for t in all_tasks:
+            if t.get("due_date"):
+                events.append({
+                    "title": t["title"],
+                    "start": t["due_date"],
+                    "color": status_colors.get(t["status"], "#94A3B8"),
+                })
+        st_calendar(
+            events=events,
+            options={
+                "initialView": "dayGridMonth",
+                "headerToolbar": {
+                    "left": "prev,next today",
+                    "center": "title",
+                    "right": "dayGridMonth,timeGridWeek",
+                },
+                "locale": "ja",
+                "height": 450,
+            },
+        )
+
+        st.divider()
+
         with st.expander("タスクを追加", expanded=False):
             t_title = st.text_input("タスク名", key="t_title")
             t_detail = st.text_area("詳細（任意）", key="t_detail", height=60)
