@@ -40,6 +40,14 @@ h1 { font-weight: 700; letter-spacing: -0.5px; }
     font-weight: 500;
 }
 
+button[data-testid="baseButton-secondary"] {
+    min-height: 26px !important;
+    height: 26px !important;
+    padding: 0 4px !important;
+    font-size: 0.8em !important;
+    line-height: 1 !important;
+}
+
 [data-testid="stMetric"] {
     border-radius: 10px;
     padding: 12px;
@@ -208,7 +216,7 @@ with hd_right:
         wcols = st.columns(7)
         for i, (col, day) in enumerate(zip(wcols, week)):
             if day == 0:
-                col.markdown("<div style='height:46px;'></div>", unsafe_allow_html=True)
+                col.markdown("<div style='height:34px;'></div>", unsafe_allow_html=True)
                 continue
             ds = f"{cal_year}-{cal_month:02d}-{day:02d}"
             tasks_on_day = task_date_map.get(ds, [])
@@ -228,10 +236,10 @@ with hd_right:
                     st.rerun()
             else:
                 col.markdown(
-                    f"<div style='height:38px;display:flex;align-items:center;justify-content:center;'>"
-                    f"<div style='background:{bg};color:{cfg};border-radius:50%;width:26px;height:26px;"
+                    f"<div style='height:26px;display:flex;align-items:center;justify-content:center;'>"
+                    f"<div style='background:{bg};color:{cfg};border-radius:50%;width:22px;height:22px;"
                     f"display:flex;align-items:center;justify-content:center;"
-                    f"font-size:0.85em;font-weight:{fw};'>{day}</div></div>",
+                    f"font-size:0.78em;font-weight:{fw};'>{day}</div></div>",
                     unsafe_allow_html=True,
                 )
             col.markdown(
