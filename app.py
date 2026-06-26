@@ -12,7 +12,7 @@ db.init_db()
 
 def get_api_key():
     try:
-        key = st.secrets.get("GEMINI_API_KEY")
+        key = st.secrets.get("GROQ_API_KEY")
     except Exception:
         key = None
     if not key:
@@ -25,7 +25,7 @@ with st.sidebar:
     st.header("⚙️ 設定")
 
     with st.expander("🔑 APIキー", expanded=not get_api_key()):
-        entered = st.text_input("Google Gemini API Key", type="password", value="")
+        entered = st.text_input("Groq API Key", type="password", value="")
         if entered:
             st.session_state["api_key"] = entered
             st.success("キーを設定しました")
