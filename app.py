@@ -59,40 +59,7 @@ def get_api_key():
     return key
 
 
-def mini_calendar_html(tasks, year, month):
-    today = date.today()
-    task_dates = {}
-    status_colors = {"未着手": "#94A3B8", "進行中": "#3B82F6", "完了": "#22C55E"}
-    for t in tasks:
-        if t.get("due_date"):
-            task_dates[t["due_date"][:10]] = status_colors.get(t["status"], "#94A3B8")
-    weeks = cal_module.monthcalendar(year, month)
-    day_names = ["月", "火", "水", "木", "金", "土", "日"]
-    html = f"""<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
-        padding:14px;font-family:sans-serif;">
-      <table style="width:100%;border-collapse:collapse;font-size:0.8em;"><tr>"""
-    for d in day_names:
-        html += f'<th style="text-align:center;padding:3px;color:#64748B;">{d}</th>'
-    html += "</tr>"
-    for week in weeks:
-        html += "<tr>"
-        for i, day in enumerate(week):
-            if day == 0:
-                html += '<td style="padding:3px;"></td>'
-            else:
-                ds = f"{year}-{month:02d}-{day:02d}"
-                is_today = (day == today.day and year == today.year and month == today.month)
-                dot = task_dates.get(ds)
-                bg = "#2563EB" if is_today else "transparent"
-                fg = "white" if is_today else ("#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B"))
-                dot_html = f'<div style="width:5px;height:5px;border-radius:50%;background:{dot};margin:1px auto 0;"></div>' if dot else '<div style="height:6px;"></div>'
-                html += f'''<td style="text-align:center;padding:2px;">
-                  <div style="background:{bg};color:{fg};border-radius:50%;width:24px;height:24px;
-                    display:flex;align-items:center;justify-content:center;margin:0 auto;
-                    font-weight:{"700" if is_today else "400"};">{day}</div>{dot_html}</td>'''
-        html += "</tr>"
-    html += "</table></div>"
-    return html
+STATUS_COLORS = {"未着手": "#94A3B8", "進行中": "#3B82F6", "完了": "#22C55E"}
 
 
 def chat_system_prompt():
@@ -215,10 +182,62 @@ with hd_right:
             st.session_state.cal_month = m
             st.rerun()
 
-    st.markdown(
-        mini_calendar_html(db.list_tasks(), st.session_state.cal_year, st.session_state.cal_month),
-        unsafe_allow_html=True,
-    )
+    all_tasks_cal = db.list_tasks()
+    cal_year = st.session_state.cal_year
+    cal_month = st.session_state.cal_month
+    weeks = cal_module.monthcalendar(cal_year, cal_month)
+
+    day_names = ["月", "火", "水", "木", "金", "土", "日"]
+    hcols = st.columns(7)
+    for col, name in zip(hcols, day_names):
+        col.markdown(
+            f"<div style='text-align:center;font-size:0.75em;color:#64748B;padding:2px;'>{name}</div>",
+            unsafe_allow_html=True,
+        )
+
+    for week in weeks:
+        wcols = st.columns(7)
+        for i, (col, day) in enumerate(zip(wcols, week)):
+            if day == 0:
+                col.markdown("<div style='height:32px;'></div>", unsafe_allow_html=True)
+                continue
+            ds = f"{cal_year}-{cal_month:02d}-{day:02d}"
+            tasks_on_day = [t for t in all_tasks_cal if t.get("due_date", "")[:10] == ds]
+            is_today = (day == today.day and cal_year == today.year and cal_month == today.month)
+            if tasks_on_day:
+                color = STATUS_COLORS.get(tasks_on_day[0]["status"], "#94A3B8")
+                label = f"**{day}**" if is_today else str(day)
+                if col.button(label, key=f"cal_{ds}", use_container_width=True):
+                    st.session_state.cal_selected_date = ds
+                    st.rerun()
+            else:
+                fg = "#DC2626" if i == 5 else ("#6366F1" if i == 6 else "#1E293B")
+                bg = "#2563EB" if is_today else "transparent"
+                cfg = "white" if is_today else fg
+                fw = "700" if is_today else "400"
+                col.markdown(
+                    f"<div style='text-align:center;background:{bg};color:{cfg};"
+                    f"border-radius:50%;width:28px;height:28px;display:flex;align-items:center;"
+                    f"justify-content:center;margin:2px auto;font-size:0.85em;font-weight:{fw};'>{day}</div>",
+                    unsafe_allow_html=True,
+                )
+
+    if st.session_state.get("cal_selected_date"):
+        sel = st.session_state.cal_selected_date
+        sel_tasks = [t for t in all_tasks_cal if t.get("due_date", "")[:10] == sel]
+        if sel_tasks:
+            st.divider()
+            st.caption(f"{sel} のタスク")
+            for t in sel_tasks:
+                c = STATUS_COLORS.get(t["status"], "#94A3B8")
+                st.markdown(
+                    f"<div style='padding:6px 10px;border-left:3px solid {c};margin:4px 0;"
+                    f"background:#F8FAFC;border-radius:0 6px 6px 0;font-size:0.85em;'>"
+                    f"<b>{t['title']}</b>&nbsp;"
+                    f"<span style='background:{c};color:white;padding:1px 6px;"
+                    f"border-radius:3px;font-size:0.75em;'>{t['status']}</span></div>",
+                    unsafe_allow_html=True,
+                )
 
 if st.session_state.chat_open:
     col_main, col_chat = st.columns([3, 2])
