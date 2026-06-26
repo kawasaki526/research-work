@@ -181,10 +181,11 @@ with hd_left:
 - アップロードしたファイルとデータはサーバー上に保存されますが、再デプロイ時に消える場合があります。
 - 論文への質問はライブラリ内の文献のみを根拠とします。
 """)
-    st.write("")
-    if st.button("チャット" if not st.session_state.chat_open else "チャットを閉じる"):
-        st.session_state.chat_open = not st.session_state.chat_open
-        st.rerun()
+    if not st.session_state.chat_open:
+        st.write("")
+        if st.button("チャットを開く"):
+            st.session_state.chat_open = True
+            st.rerun()
 
 with hd_right:
     all_tasks_cal = db.list_tasks()
@@ -464,7 +465,14 @@ with col_main:
 # ================== 右カラム: チャット ==================
 if col_chat is not None:
     with col_chat:
-        st.subheader("チャット")
+        ch1, ch2 = st.columns([4, 1])
+        with ch1:
+            st.subheader("チャット")
+        with ch2:
+            st.write("")
+            if st.button("閉じる", use_container_width=True):
+                st.session_state.chat_open = False
+                st.rerun()
 
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
