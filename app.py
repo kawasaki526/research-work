@@ -110,18 +110,9 @@ with st.sidebar:
 
     field        = st.text_input("専門分野", key="prof_field")
     subtopics    = st.text_input("サブトピック", key="prof_sub")
-    level        = st.selectbox(
-        "レベル", config.LEVELS,
-        index=config.LEVELS.index(st.session_state.prof_level)
-              if st.session_state.prof_level in config.LEVELS else 1,
-        key="prof_level",
-    )
+    level        = st.selectbox("レベル", config.LEVELS, key="prof_level")
     focus        = st.text_area("現在の関心 / 取り組み", key="prof_focus", height=80)
-    answer_lang  = st.selectbox(
-        "回答言語", ["日本語", "English"],
-        index=0 if st.session_state.prof_lang == "日本語" else 1,
-        key="prof_lang",
-    )
+    answer_lang  = st.selectbox("回答言語", ["日本語", "English"], key="prof_lang")
     answer_style = st.text_input("回答スタイル", key="prof_style")
 
     if st.button("プロフィールを保存", use_container_width=True):
